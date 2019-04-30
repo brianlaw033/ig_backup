@@ -7,8 +7,8 @@ Backup photos and highlighted stories on Instagram
 
 Optional: `--username={YOUR_USERNAME} --password={YOUR_PASSWORD}`
 
-p.s: Everything runs locally, your username and password will not be exposed to public.
-Use this wisely, Instagram might block your account if you login too many times.
+p.s: Everything runs locally, your username and password will not expose to the public.
+Use this wisely, Do not run with your username and password too many times per day, Instagram might block your account if you login too many times. A fake account is recommended for public users account.
 
 
 ## Future plans
