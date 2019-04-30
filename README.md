@@ -14,3 +14,4 @@ Use this wisely, Do not run with your username and password too many times per d
 ## Future plans
 - [ ] Capture live videos
 - [ ] Capture all active stories
+- [ ] Capture story or photos by url
