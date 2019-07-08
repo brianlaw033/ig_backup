@@ -4,6 +4,7 @@ const _ = require('lodash')
 const fs = require("fs");
 const rp = require('request-promise');
 const minimist = require('minimist')
+const infiniteScroll = require('./src/infiniteScroll')
 
 browser = null;
 page = null;
@@ -12,6 +13,8 @@ storyCluster = null;
 
 const args = minimist(process.argv.slice(2))
 const dir = `./img/${args.target}`
+
+let queue = {}
 
 const init = async() => {
   try {
@@ -31,15 +34,22 @@ const setup = async() => {
     fs.mkdirSync(dir);
   }
   console.log('Starting browser...')
-  browser = await puppeteer.launch({headless: false});
+  browser = await puppeteer.launch({
+    args: ['--disable-dev-shm-usage'],
+    headless: false
+  });
   page = await browser.newPage();
   cluster = await Cluster.launch({
     concurrency: Cluster.CONCURRENCY_PAGE, // use one browser per worker
-    maxConcurrency: 4, // cluster with four workers
+    maxConcurrency: 10, // cluster with four workers
+    args: ['--disable-dev-shm-usage'],
+    headless: false
   });
   storyCluster = await Cluster.launch({
     concurrency: Cluster.CONCURRENCY_PAGE, // use one browser per worker
     maxConcurrency: 2, // cluster with 2 workers
+    args: ['--disable-dev-shm-usage'],
+    headless: false
   });
   page.on('pageerror', err => {
     console.error('Page error: ' + err)
@@ -47,33 +57,52 @@ const setup = async() => {
   page.on('error', err => {
     console.error('Error: ' + err)
   })
-  await page.setViewport({ width: 1366, height: 768 })
+  await page.setViewport({ width: 140, height: 770 })
   if (args.username && args.password) {
     await login(page, args.username, args.password)
   }
   console.log(`Going to https://www.instagram.com/${args.target}`)
   await page.goto(`https://www.instagram.com/${args.target}`, { waitUntil: 'networkidle2' });
+  await page.waitFor(1000);
 }
 
 const start = async() => {
-  await cluster.task(capturePost)
-  const hrefs = await page.$$eval('article a', as => as.map(a => a.href));
-  hrefs.map(async href => {
-    cluster.queue(href)
-  })
+  const startScrapping = async() => {
+    try {
+      cluster.task(capturePost)
+      const hrefs = await page.$$eval('article a', as => as.map(a => a.href));
+      console.log(hrefs.length)
+      hrefs.map(async href => {
+        queue = { [href]: false, ...queue}
+        queue[href] || cluster.queue(href)
+      })
+      await cluster.idle()
 
-  await storyCluster.task(captureHighlightStory)
-  const storyButtons = await page.$$('canvas')
-  storyButtons.map(async (button, i) => {
-    storyCluster.queue(i)
-  })
+      storyCluster.task(captureHighlightStory)
+      const storyButtons = await page.$$('canvas')
+      storyButtons.map(async (button, i) => {
+        storyCluster.queue(i)
+      })
+    }
+    catch (err) {
+      console.log(err)
+    }
+  }
+  await startScrapping()
+  await infiniteScroll(page, { onScroll: startScrapping})
 }
 
+
 const end = async() => {
-  await cluster.idle();
-  console.log('Closing...')
-  await browser.close();
-  await cluster.close();
+  try {
+    await cluster.idle();
+    console.log(Object.keys(queue).keys.length)
+    console.log('Closing...')
+    await browser.close();
+    // await cluster.close();
+  } catch (err) {
+    console.log(err)
+  }
 }
 
 const capturePost = async({ page, data: url }) => {
@@ -87,10 +116,9 @@ const capturePost = async({ page, data: url }) => {
     await page.goto(url)
     const imgs = await page.$$eval('article .FFVAD', imgs => imgs.map(img => img.src));
     const videos = await page.$$eval('article video', videos => videos.map(video => video.src));
-    [...imgs, ...videos].map(async(img, i) => {
+    return [...imgs, ...videos].map(async(img, i) => {
       console.log(`Downloading ${img.match(/[\w-]+.(jpg|png|mp4)/gs)}...`)
-      await download(img, `${dir}/${img.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
-      console.log(`${img.match(/[\w-]+.(jpg|png|mp4)/gs)} Done`)
+      return download(img, `${dir}/${img.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
     })
   }
   catch (err) {
