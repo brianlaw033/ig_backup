@@ -5,6 +5,8 @@ const fs = require("fs");
 const rp = require('request-promise');
 const minimist = require('minimist')
 const infiniteScroll = require('./src/infiniteScroll')
+const devices = require('puppeteer/DeviceDescriptors');
+const iPhone = devices['iPhone 6'];
 
 browser = null;
 page = null;
@@ -39,6 +41,7 @@ const setup = async() => {
     headless: false
   });
   page = await browser.newPage();
+  await page.emulate(iPhone);
   cluster = await Cluster.launch({
     concurrency: Cluster.CONCURRENCY_PAGE, // use one browser per worker
     maxConcurrency: 10, // cluster with four workers
@@ -57,49 +60,60 @@ const setup = async() => {
   page.on('error', err => {
     console.error('Error: ' + err)
   })
-  await page.setViewport({ width: 140, height: 770 })
+  await page.setViewport({ width: 400, height: 812 })
   if (args.username && args.password) {
     await login(page, args.username, args.password)
   }
-  console.log(`Going to https://www.instagram.com/${args.target}`)
-  await page.goto(`https://www.instagram.com/${args.target}`, { waitUntil: 'networkidle2' });
-  await page.waitFor(1000);
+  console.log(`Going to https://www.instagram.com/${args.target}/feed/`)
+  await page.goto(`https://www.instagram.com/${args.target}/feed/`, { waitUntil: 'networkidle2' });
+  // await page.waitFor(10000);
 }
 
 const start = async() => {
   const startScrapping = async() => {
+    current = [...Object.keys(queue)].length
     try {
-      cluster.task(capturePost)
-      const hrefs = await page.$$eval('article a', as => as.map(a => a.href));
-      console.log(hrefs.length)
-      hrefs.map(async href => {
-        queue = { [href]: false, ...queue}
-        queue[href] || cluster.queue(href)
-      })
-      await cluster.idle()
+      const imgs = await page.$$eval('article .FFVAD', imgs => imgs.map(img => img.src));
+      const videos = await page.$$eval('article video', videos => videos.map(video => video.src));
 
-      storyCluster.task(captureHighlightStory)
-      const storyButtons = await page.$$('canvas')
-      storyButtons.map(async (button, i) => {
-        storyCluster.queue(i)
+      [...imgs, ...videos].forEach(async(src, i) => {
+        queue = { [src]: false, ...queue}
       })
+
+      // storyCluster.task(captureHighlightStory)
+      // const storyButtons = await page.$$('canvas')
+      // storyButtons.map(async (button, i) => {
+      //   storyCluster.queue(i)
+      // })
     }
     catch (err) {
       console.log(err)
     }
   }
   await startScrapping()
-  await infiniteScroll(page, { onScroll: startScrapping})
+  await page.evaluate("document.querySelectorAll('article')[document.querySelectorAll('article').length - 1].scrollIntoView()")
+  await page.waitFor(1000);
+
+  await infiniteScroll(page, {
+    onScroll: startScrapping,
+    customScroll: async() => {
+      await page.evaluate("document.querySelectorAll('article')[document.querySelectorAll('article').length - 1].scrollIntoView()")
+    }
+  })
+
+  cluster.task(capturePost)
+  Object.keys(queue).forEach(src => {
+    cluster.queue(src)
+  })
 }
 
 
 const end = async() => {
   try {
     await cluster.idle();
-    console.log(Object.keys(queue).keys.length)
     console.log('Closing...')
     await browser.close();
-    // await cluster.close();
+    await cluster.close();
   } catch (err) {
     console.log(err)
   }
@@ -107,19 +121,8 @@ const end = async() => {
 
 const capturePost = async({ page, data: url }) => {
   try {
-    const islogin = await isLoggedIn(page)
-
-    if (!islogin && args.username && args.password) {
-      await login(page, args.username, args.password)
-    }
-
-    await page.goto(url)
-    const imgs = await page.$$eval('article .FFVAD', imgs => imgs.map(img => img.src));
-    const videos = await page.$$eval('article video', videos => videos.map(video => video.src));
-    return [...imgs, ...videos].map(async(img, i) => {
-      console.log(`Downloading ${img.match(/[\w-]+.(jpg|png|mp4)/gs)}...`)
-      return download(img, `${dir}/${img.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
-    })
+    console.log(`Downloading ${url.match(/[\w-]+.(jpg|png|mp4)/gs)}...`)
+    return download(url, `${dir}/${url.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
   }
   catch (err) {
     console.log(err)
