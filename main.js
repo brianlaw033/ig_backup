@@ -17,6 +17,7 @@ const args = minimist(process.argv.slice(2))
 const dir = `./img/${args.target}`
 
 let queue = {}
+let storyQueue = {}
 
 const init = async() => {
   try {
@@ -66,11 +67,11 @@ const setup = async() => {
   }
   console.log(`Going to https://www.instagram.com/${args.target}/feed/`)
   await page.goto(`https://www.instagram.com/${args.target}/feed/`, { waitUntil: 'networkidle2' });
-  // await page.waitFor(10000);
+  await page.waitFor(1000);
 }
 
 const start = async() => {
-  const startScrapping = async() => {
+  const scrapeImages = async() => {
     current = [...Object.keys(queue)].length
     try {
       const imgs = await page.$$eval('article .FFVAD', imgs => imgs.map(img => img.src));
@@ -90,23 +91,53 @@ const start = async() => {
       console.log(err)
     }
   }
-  await startScrapping()
+
+  const scrapeStories = async() => {
+    try {
+      await page.click('._3D7yK')
+      let buttonExist = true
+      while (buttonExist) {
+        try {
+          await page.waitFor('._4sLyX')
+          await page.waitFor(2000)
+          const video = await page.$eval('video source', video => video.src);
+          const img = await page.$eval('img', img => img.src);
+          let src = video || img
+          storyQueue = { [src]: false, ...storyQueue}
+          await page.waitFor('._4sLyX')
+          await page.click('._4sLyX') // Next Story
+          await page.$eval('._4sLyX', ele => buttonExist = !!ele)
+        } catch {
+          buttonExist = false
+        }
+      }
+    } catch {
+      console.log('No stories available.')
+    }
+  }
+  await scrapeImages()
   await page.evaluate("document.querySelectorAll('article')[document.querySelectorAll('article').length - 1].scrollIntoView()")
   await page.waitFor(1000);
 
   await infiniteScroll(page, {
-    onScroll: startScrapping,
+    onScroll: scrapeImages,
     customScroll: async() => {
       await page.evaluate("document.querySelectorAll('article')[document.querySelectorAll('article').length - 1].scrollIntoView()")
     }
   })
 
+  await scrapeStories()
+
   cluster.task(capturePost)
   Object.keys(queue).forEach(src => {
     cluster.queue(src)
   })
-}
 
+  storyCluster.task(captureHighlightStory)
+  Object.keys(storyQueue).forEach(async (src, i) => {
+    storyCluster.queue(src)
+  })
+}
 
 const end = async() => {
   try {
@@ -129,27 +160,10 @@ const capturePost = async({ page, data: url }) => {
   }
 }
 
-const captureHighlightStory = async({ page, data: buttonNo }) => {
-  try {
-    const islogin = await isLoggedIn(page)
-    if (!islogin && args.username && args.password) {
-      await login(page, args.username, args.password)
-    }
-
-    await page.goto(`https://www.instagram.com/${args.target}`, { waitUntil: 'networkidle2' });
-    const storyButtons = await page.$$('canvas')
-    await storyButtons[buttonNo].click()
-    await page.waitForSelector('video source')
-    const video = await page.$eval('video source', video => video.src);
-    const img = await page.$eval('img', img => img.src);
-    let src = video || img
-    console.log(`Downloading ${src.match(/[\w-]+.(jpg|png|mp4)/gs)}...`)
-    download(src, `${dir}/${src.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
-    console.log(`${src.match(/[\w-]+.(jpg|png|mp4)/gs)} Done`)
-  }
-  catch (err) {
-    console.log(err)
-  }
+const captureHighlightStory = async({ page, data: src }) => {
+  console.log(`Downloading ${src.match(/[\w-]+.(jpg|png|mp4)/gs)}...`)
+  download(src, `${dir}/${src.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
+  console.log(`${src.match(/[\w-]+.(jpg|png|mp4)/gs)} Done`)
 }
 
 const download = (uri, filename, callback) => {
@@ -170,12 +184,6 @@ const login = async(page, username, password) => {
     const as = document.querySelectorAll('section > nav a')
     return as[as.length - 1] && as[as.length - 1].href.includes(args[0])
   }, {}, username)
-}
-
-const isLoggedIn = async(page) => {
-  await page.goto(`https://www.instagram.com/${args.target}`, { waitUntil: 'networkidle2' });
-  const hasSignUpButton = await page.$$eval('section > nav a', as => as[as.length - 1].innerText ==='Sign Up' )
-  return !hasSignUpButton
 }
 
 init()
