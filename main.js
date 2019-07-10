@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 const _ = require('lodash')
-const minimist = require('minimist')
+// const minimist = require('minimist')
 const devices = require('puppeteer/DeviceDescriptors');
 const iPhone = devices['iPhone 6'];
 const fs = require("fs");
@@ -13,13 +13,13 @@ const getPostList = require('./src/scrapeImages')
 browser = null;
 page = null;
 
-const args = minimist(process.argv.slice(2))
+// const args = minimist(process.argv.slice(2))
 let dir;
 
 let queue = {}
 let storyQueue = {}
 
-const init = async() => {
+const init = async(args) => {
   try {
     dir = `./img/${args.target}`
     await setup(args)
@@ -91,4 +91,3 @@ const downloadList = async(src) => {
 }
 
 module.exports = init
-init ()
