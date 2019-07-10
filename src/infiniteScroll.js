@@ -13,7 +13,6 @@ const infiniteScroll = async (page, { onScroll, customScroll }) => {
     await onScroll && onScroll()
     currentHeight = await page.evaluate('document.body.scrollHeight');
   }
-  console.log('Done')
   return true
 }
 
