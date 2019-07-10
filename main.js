@@ -40,7 +40,7 @@ const setup = async(args) => {
   console.log('Starting browser...')
   browser = await puppeteer.launch({
     args: ['--disable-dev-shm-usage'],
-    headless: false
+    // headless: false
   });
   page = await browser.newPage();
   await page.emulate(iPhone);
@@ -91,3 +91,4 @@ const downloadList = async(src) => {
 }
 
 module.exports = init
+init ()
