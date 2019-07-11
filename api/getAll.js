@@ -1,7 +1,8 @@
 const scrapper = require('../main')
 
-const getAll = (req, res) => {
-  scrapper(req.body)
+const getAll = async(req, res) => {
+  const archive = await scrapper(req.body)
+  res.download(archive)
 }
 
 module.exports = getAll

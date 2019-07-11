@@ -9,6 +9,7 @@ const login = require('./src/login')
 const download = require('./src/download')
 const getStoryList = require('./src/scrapeStories')
 const getPostList = require('./src/scrapeImages')
+const compress = require('./src/compress')
 
 browser = null;
 page = null;
@@ -19,24 +20,25 @@ let dir;
 let queue = {}
 let storyQueue = {}
 
-const init = async(args) => {
+const init = async args => {
   try {
     dir = `./img/${args.target}`
     await setup(args)
-    await start()
+    await start(args)
   }
   catch (err) {
     console.error(err)
   }
   finally {
-    await end()
+    return await end(args)
   }
 }
 
-const setup = async(args) => {
+const setup = async args => {
   if (!fs.existsSync(dir)){
     fs.mkdirSync(dir);
   }
+
   console.log('Starting browser...')
   browser = await puppeteer.launch({
     args: ['--disable-dev-shm-usage'],
@@ -59,30 +61,37 @@ const setup = async(args) => {
   await page.waitFor(1000);
 }
 
-const start = async() => {
+const start = async args => {
   console.log('Scrapping images....')
   queue = await getPostList(page)
 
   console.log('Scrapping highlighted stories....')
   storyQueue = await getStoryList(page)
 
-  Object.keys({ ...queue, ...storyQueue }).forEach(src => {
-    downloadList(src)
+  const items = Object.keys({ ...queue, ...storyQueue })
+
+  console.log(`Downloading ${items.length} images/videos....`)
+  let promises = items.map(src => {
+    return downloadList(src)
   })
+  await Promise.all(promises)
+
+  await compress(args)
 }
 
-const end = async() => {
+const end = async args => {
   try {
     console.log('Closing...')
     await browser.close();
   } catch (err) {
     console.log(err)
+  } finally {
+    return `outputs/${args.target}.zip`
   }
 }
 
-const downloadList = async(src) => {
+const downloadList = async src => {
   try {
-    console.log(`Downloading ${src.match(/[\w-]+.(jpg|png|mp4)/gs)}...`)
     return download(src, `${dir}/${src.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
   }
   catch (err) {

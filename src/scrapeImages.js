@@ -27,10 +27,9 @@ const getExisitingPosts = async(page) => {
     })
   }
   catch (err) {
-    console.log(err)
-  } finally {
-    return queue
+    // console.log(err)
   }
+  return queue
 }
 
 module.exports = getPostList
