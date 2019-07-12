@@ -1,7 +1,8 @@
-const scrapper = require('../main')
+const Instagrapper = require('../main')
 
 const getAll = async(req, res) => {
-  const archive = await scrapper(req.body)
+  const archive = await new Instagrapper().init(req.body)
+  console.log('Sending zip file...')
   res.download(archive)
 }
 
