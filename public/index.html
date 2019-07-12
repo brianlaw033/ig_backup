@@ -1,0 +1,41 @@
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1"
+		/>
+    <link href="./styles.css" rel="stylesheet" type="text/css"/>
+    <link rel="stylesheet" href="https://unpkg.com/@coreui/coreui/dist/css/coreui.min.css">
+	</head>
+	<body>
+    <h1 class="display-1 title">Insta9rapper</h1>
+    <form method="post" action="/get-all" onsubmit="onSubmit()">
+      <input class="target" name="target" placeholder="Instagram username" />
+      <small class="form-text text-muted">
+        To scrape a private account, you must provide an account that is following the target user.
+      </small>
+      <div class="login-detail">
+        <input name="username" placeholder="Login usesrname" />
+        <input name="password" type="password" placeholder="Login password" />
+      </div>
+      <small class="form-text text-muted">
+        Although we'll never save your username and password, a fake account is prefered.
+      </small>
+      <button class="btn btn-pill btn-primary btn-block submit" type="submit">
+        Submit
+      </button>
+    </form>
+
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/@coreui/coreui/dist/js/coreui.min.js"></script>
+	</body>
+</html>
+
+<script>
+  function onSubmit() {
+    return false
+  }
+</script>
