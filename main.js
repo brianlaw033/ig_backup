@@ -42,7 +42,14 @@ class Instagrapper {
     console.log('Starting browser...')
     this.browser = await puppeteer.launch({
       args: ['--disable-dev-shm-usage'],
-      headless: false
+      args: [
+        // Required for Docker version of Puppeteer
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        // This will write shared memory files into /tmp instead of /dev/shm,
+        // because Docker’s default for /dev/shm is 64MB
+        '--disable-dev-shm-usage'
+      ]
     });
     this.page = await this.browser.newPage();
     await this.page.emulate(iPhone);
