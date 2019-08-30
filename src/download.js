@@ -1,13 +1,16 @@
 const rp = require('request-promise');
 const fs = require("fs");
 
-const download = (uri, filename, callback) => {
-  console.log(`Downloading ${filename}...`)
-  return rp.head(uri, (err, res, body) => {
+const download = (uri, filename) => {
+  return new Promise((resolve, reject) => {
     rp(uri)
     .pipe(fs.createWriteStream(filename))
-    .on("close", callback);
-  });
+    .on("finish", resolve)
+    .on('error', function(err) {
+      console.log({ uri, err })
+      reject
+    })
+  })
 }
 
 module.exports = download

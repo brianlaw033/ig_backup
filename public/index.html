@@ -1,0 +1,84 @@
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1"
+		/>
+    <link href="./styles.css" rel="stylesheet" type="text/css"/>
+    <link rel="stylesheet" href="https://unpkg.com/@coreui/coreui/dist/css/coreui.min.css">
+	</head>
+	<body>
+    <h1 class="display-1 title">Insta9rapper</h1>
+    <form>
+      <input class="target" name="target" placeholder="Instagram username" />
+      <small class="form-text text-muted">
+        To scrape a private account, you must provide an account that is following the target user.
+      </small>
+      <div class="login-detail">
+        <input name="username" placeholder="Login usesrname" autocomplete="username" />
+        <input name="password" type="password" placeholder="Login password" autocomplete="current-password" />
+      </div>
+      <small class="form-text text-muted">
+        Although we'll never save your username and password, a fake account is prefered.
+      </small>
+      <button class="btn btn-pill btn-primary btn-block submit" type="submit">
+        Submit
+      </button>
+    </form>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.slim.js" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>    <script src="https://unpkg.com/@coreui/coreui/dist/js/coreui.min.js"></script>
+	</body>
+</html>
+
+<script>
+  $(function () {
+    var socket = io();
+    $('form').submit(function(e){
+      e.preventDefault();
+      const obj = {
+        target: document.getElementsByName("target")[0].value,
+        username: document.getElementsByName("username")[0].value,
+        password: document.getElementsByName("password")[0].value
+      }
+      obj.target && socket.emit('getAll', obj);
+
+      $('button.submit').prop('disabled', true);
+      return false;
+    });
+
+    socket.on('progress', (msg) => {
+      $('button.submit').html(
+        `
+          <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          ${msg}
+        `
+      )
+    })
+
+    socket.on('done', (archive) => {
+      axios({
+        url: '/download',
+        method: 'POST',
+        data: {
+          location: archive
+        },
+        responseType: 'blob'
+      }).then(response => {
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `${document.getElementsByName("target")[0].value}.zip`);
+        document.body.appendChild(link);
+        link.click();
+        $('button.submit').prop('disabled', false);
+        $('button.submit').text('Submit')
+        document.getElementsByName("target")[0].value = ''
+      })
+    })
+  });
+</script>

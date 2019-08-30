@@ -1,6 +1,6 @@
 const infiniteScroll = require('./infiniteScroll')
 
-const getPostList = async(page) => {
+const getPostList = async(page, callback) => {
   let queue = await getExisitingPosts(page)
   await page.evaluate("document.querySelectorAll('article')[document.querySelectorAll('article').length - 1].scrollIntoView()")
   await page.waitFor(1000);
@@ -8,9 +8,15 @@ const getPostList = async(page) => {
     onScroll: async() => {
       let tmp = await getExisitingPosts(page)
       queue = { ...queue, ...tmp }
+      await callback(Object.keys(queue).length)
+      return true
     },
     customScroll: async() => {
       await page.evaluate("document.querySelectorAll('article')[document.querySelectorAll('article').length - 1].scrollIntoView()")
+    },
+    customContinue: async() => {
+      const loading = await page.$('.Id0Rh')
+      return !!loading
     }
   })
   return queue
@@ -27,10 +33,9 @@ const getExisitingPosts = async(page) => {
     })
   }
   catch (err) {
-    console.log(err)
-  } finally {
-    return queue
+    // console.log(err)
   }
+  return queue
 }
 
 module.exports = getPostList

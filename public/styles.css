@@ -1,0 +1,42 @@
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #282C34 !important;
+}
+
+.title {
+  color: #fff;
+}
+
+input {
+  border-radius: 50px;
+  padding: 5px 8px 7px 16px;
+  border: 1px solid #dfe1e5;
+  margin-top: 15px !important;
+  height: 40px;
+  width: 100%;
+  outline: none;
+}
+small {
+  text-align: center;
+}
+
+.target {
+  width: 582px;
+}
+
+.login-detail {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.login-detail > input:first-child {
+  margin-right: 5px;
+}
+
+.submit {
+  margin-top: 15px;
+}
