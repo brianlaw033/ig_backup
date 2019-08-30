@@ -14,7 +14,7 @@ const getVideo = async(page) => {
   }
 }
 
-const getStoryList = async(page) => {
+const getStoryList = async(page, callback) => {
   let storyQueue = {}
   try {
     await page.click('._3D7yK')
@@ -25,6 +25,7 @@ const getStoryList = async(page) => {
         await page.waitFor(500)
         let src = await getVideo(page) || await getImage(page)
         storyQueue = { [src]: false, ...storyQueue }
+        callback(Object.keys(storyQueue).length)
         await page.waitFor('._4sLyX')
         await page.click('._4sLyX') // Next Story
         await page.$eval('._4sLyX', ele => buttonExist = !!ele)

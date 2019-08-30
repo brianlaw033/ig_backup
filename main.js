@@ -3,13 +3,25 @@ const _ = require('lodash')
 const devices = require('puppeteer/DeviceDescriptors');
 const iPhone = devices['iPhone 6'];
 const fs = require("fs");
+const pLimit = require('p-limit');
 
 const login = require('./src/login')
 const download = require('./src/download')
 const getStoryList = require('./src/scrapeStories')
 const getPostList = require('./src/scrapeImages')
 const compress = require('./src/compress')
+const utils = require('./src/utils')
 
+const limit = pLimit(5)
+
+const status = {
+  login: 'Logging in...',
+  visiting: target => `Searching ${target}`,
+  scrappingImages: count => `Scrapping images... ${count ? `${count} Found.` : ''}`,
+  scrappingStories: count => `Scrapping highlighted stories... ${count ? `${count} Found.` : ''}`,
+  downloading: progress => `Preparing ${progress}...`,
+  compressing: 'Compressing images...'
+}
 
 class Instagrapper {
   constructor() {
@@ -18,11 +30,13 @@ class Instagrapper {
     this.queue = {}
     this.storyQueue = {}
     this.dir = ''
+    this.status = ''
   }
 
-  async init (args) {
+  async init (args, proxy) {
     try {
       this.dir = `./img/${args.target}`
+      this.proxy = proxy
       await this.setup(args)
       await this.start(args)
     }
@@ -61,29 +75,43 @@ class Instagrapper {
       console.error('Error: ' + err)
     })
     if (args.username && args.password) {
-      await login(page, args.username, args.password)
+      this.proxy.status = status.login
+      await login(this.page, args.username, args.password)
     }
-    console.log(`Going to https://www.instagram.com/${args.target}/feed/`)
+    this.proxy.status = status.visiting(args.target)
     await this.page.goto(`https://www.instagram.com/${args.target}/feed/`, { waitUntil: 'networkidle2' });
     await this.page.waitFor(1000);
   }
 
   async start (args) {
-    console.log('Scrapping images....')
-    this.queue = await getPostList(this.page)
-
-    console.log('Scrapping highlighted stories....')
-    this.storyQueue = await getStoryList(this.page)
-
-    const items = Object.keys({ ...this.queue, ...this.storyQueue })
-
-    console.log(`Downloading ${items.length} images/videos....`)
-    let promises = items.map(src => {
-      return this.downloadList(src)
+    this.proxy.status = status.scrappingImages()
+    this.queue = await getPostList(this.page, count => {
+      this.proxy.status = status.scrappingImages(count)
+      return true
     })
-    await Promise.all(promises)
 
-    await compress(args)
+    this.proxy.status = status.scrappingStories()
+    this.storyQueue = await getStoryList(this.page, count => {
+      this.proxy.status = status.scrappingStories(count)
+      return true
+    })
+
+    let items = Object.keys({ ...this.queue, ...this.storyQueue })
+
+    items = _.remove(items, item => {
+      return !!item
+    })
+
+    let promises = items.map(src => {
+      return limit(() => download(src, `${this.dir}/${src.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {}))
+    })
+
+    await utils.allProgress(promises, (finishCount) => {
+      this.proxy.status = status.downloading(`${finishCount} / ${items.length}`)
+    })
+
+    this.proxy.status = status.compressing
+    return await compress(args)
   }
 
   async end (args) {
@@ -94,15 +122,6 @@ class Instagrapper {
       console.log(err)
     } finally {
       return `outputs/${args.target}.zip`
-    }
-  }
-
-  async downloadList (src) {
-    try {
-      return download(src, `${this.dir}/${src.match(/[\w-]+.(jpg|png|mp4)/gs)}`, () => {})
-    }
-    catch (err) {
-      console.log(err)
     }
   }
 

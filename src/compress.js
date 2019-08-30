@@ -1,25 +1,30 @@
 const fs = require("fs");
 const archiver = require('archiver');
 
-const compress = async(args) => {
-  const output = fs.createWriteStream(`outputs/${args.target}.zip`);
-  const archive = archiver('zip', {
-    zlib: { level: 9 }
-  });
+const compress = args => {
+  return new Promise(async(resolve, reject) => {
+    const output = fs.createWriteStream(`outputs/${args.target}.zip`);
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
 
-  output.on('close', function () {
-    console.log(archive.pointer() + ' total bytes');
-    console.log('archiver has been finalized and the output file descriptor has closed.');
-  });
+    output.on('close', function () {
+      console.log(archive.pointer() + ' total bytes');
+      console.log('archiver has been finalized and the output file descriptor has closed.');
+      resolve(true)
+    });
 
-  archive.on('error', function(err) {
-    throw err;
-  });
+    output.on("error", reject);
 
-  archive.pipe(output);
+    archive.on('error', function(err) {
+      throw err;
+    });
 
-  archive.directory(`img/${args.target}/`, args.target)
-  await archive.finalize()
+    archive.pipe(output);
+
+    archive.directory(`img/${args.target}/`, args.target)
+    await archive.finalize()
+  })
 }
 
 module.exports = compress
