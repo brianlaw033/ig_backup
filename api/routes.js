@@ -1,6 +1,5 @@
 "use strict";
 
-const getAll = require('./getAll')
 const path = require('path')
 
 module.exports = function(app) {
