@@ -11,3 +11,4 @@ Backup photos and highlighted stories on Instagram
 - [ ] Capture live videos
 - [ ] Capture all active stories
 - [ ] Capture story or photos by url
+- [ ] Capture text with photos
