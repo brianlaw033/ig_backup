@@ -1,4 +1,4 @@
-# ig_backup
+# Insta9rapper
 Backup photos and highlighted stories on Instagram
 
 ## How to use
