@@ -3,7 +3,7 @@ Backup photos and highlighted stories on Instagram
 
 ## How to use
 1. Have Docker installed
-2. docker-compose up --build
+2. `docker container run -p 9527:8964 blaw033/igbackup`
 3. `localhost:9527`
 
 
