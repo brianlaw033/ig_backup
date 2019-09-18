@@ -1,10 +1,12 @@
 # Insta9rapper
 Backup photos and highlighted stories on Instagram
 
+## Prerequisite
+- Have Docker installed
+
 ## How to use
-1. Have Docker installed
-2. `docker container run -p 9527:8964 blaw033/igbackup`
-3. `localhost:9527`
+1. `docker container run -p 9527:8964 blaw033/igbackup`
+2. `localhost:9527`
 
 
 ## Future plans
