@@ -5,13 +5,13 @@ const iPhone = devices['iPhone 6'];
 const fs = require("fs");
 const pLimit = require('p-limit');
 
-const login = require('./src/login')
-const download = require('./src/download')
-const getStoryList = require('./src/scrapeStories')
-const getPostList = require('./src/scrapeImages')
-const compress = require('./src/compress')
-const utils = require('./src/utils')
-const config = require('./config')
+const login = require('./login')
+const download = require('./download')
+const getStoryList = require('./scrapeStories')
+const getPostList = require('./scrapeImages')
+const compress = require('./compress')
+const utils = require('./utils')
+const config = require('../config')
 
 const limit = pLimit(5)
 
