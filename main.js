@@ -11,6 +11,7 @@ const getStoryList = require('./src/scrapeStories')
 const getPostList = require('./src/scrapeImages')
 const compress = require('./src/compress')
 const utils = require('./src/utils')
+const config = require('./config')
 
 const limit = pLimit(5)
 
@@ -55,15 +56,7 @@ class Instagrapper {
 
     console.log('Starting browser...')
     this.browser = await puppeteer.launch({
-      args: ['--disable-dev-shm-usage'],
-      args: [
-        // Required for Docker version of Puppeteer
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        // This will write shared memory files into /tmp instead of /dev/shm,
-        // because Docker’s default for /dev/shm is 64MB
-        '--disable-dev-shm-usage'
-      ]
+      args: config.puppeteer
     });
     this.page = await this.browser.newPage();
     await this.page.emulate(iPhone);
