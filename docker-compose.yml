@@ -1,9 +1,23 @@
 version: '3'
 services:
   server:
-    build: .
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
     volumes:
       - .:/app
+      - /app/img/
+      - /app/outputs/
       - /app/node_modules/
     ports:
       - "9527:8964"
+  tests:
+    build:
+      context: .
+      dockerfile: dev.Dockerfile
+    volumes:
+      - .:/app
+      - /app/img/
+      - /app/outputs/
+      - /app/node_modules/
+    command: ["npm", "run", "test"]

@@ -1,15 +1,9 @@
-# base image
-FROM buildkite/puppeteer:latest
-
-# set working directory
+FROM buildkite/puppeteer:latest as builder
 WORKDIR /app
-
 COPY ./package.json ./
-
-# install and cache app dependencies
 RUN npm install
-
 COPY . .
+RUN npm run build
 
-# start app
-CMD ["npm", "start"]
+FROM nginx
+COPY --from=builder /app/build /usr/share/nginx/html
